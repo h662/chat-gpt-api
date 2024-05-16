@@ -2,16 +2,20 @@ import axios from "axios";
 import { useState } from "react";
 import { FiSearch } from "react-icons/fi";
 import ChatlistCard from "../components/ChatlistCard";
+import { CgOpenCollective } from "react-icons/cg";
 
 const Home = () => {
   const [content, setContent] = useState("");
   const [chatlist, setChatlist] = useState([]);
+  const [isLoading, setLoading] = useState(false);
 
   const onSubmitChat = async (e) => {
     try {
       e.preventDefault();
 
       if (!content) return;
+
+      setLoading(true);
 
       const response = await axios.post(
         "https://api.openai.com/v1/chat/completions",
@@ -32,15 +36,30 @@ const Home = () => {
         }
       );
 
-      setChatlist([
-        {
-          question: content,
-          answer: response.data.choices[0].message.content,
-        },
-        ...chatlist,
-      ]);
+      const newChat = {
+        question: content,
+        answer: response.data.choices[0].message.content,
+      };
+
+      let savedChatlist = localStorage.getItem("savedChatlist");
+
+      if (!savedChatlist) {
+        savedChatlist = [];
+      } else {
+        savedChatlist = JSON.parse(savedChatlist);
+      }
+
+      savedChatlist.push(newChat);
+
+      localStorage.setItem("savedChatlist", JSON.stringify(savedChatlist));
+
+      setChatlist([newChat, ...chatlist]);
+
+      setLoading(false);
     } catch (error) {
       console.error(error);
+
+      setLoading(false);
     }
   };
 
@@ -51,13 +70,19 @@ const Home = () => {
           className="text-2xl p-2 focus:outline-none rounded-lg border-2 border-pink-200 focus:border-pink-400"
           type="text"
           value={content}
+          disabled={isLoading}
           onChange={(e) => setContent(e.target.value)}
         />
         <button
           className="ml-4 flex items-center bg-pink-400 text-2xl px-4 py-[10px] rounded-full shadow-md shadow-pink-200 hover:bg-pink-500"
           type="submit"
+          disabled={isLoading}
         >
-          <FiSearch className="mr-2" />
+          {isLoading ? (
+            <CgOpenCollective className="mr-2 animate-spin-slow" />
+          ) : (
+            <FiSearch className="mr-2" />
+          )}
           검색
         </button>
       </form>
